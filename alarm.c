@@ -5,8 +5,9 @@
 #include <unistd.h>
 
 #define HELP_COMMAND_SEQUENCE "\t%s\n\t\t%s\n\t\t%s\n"
-#define SOUND_PLAYER "vlc "
 #define SECONDS_PER_DAY 86400
+
+const char *SOUND_PLAYER = "vlc ";
 
 struct alarm_command {
   const char *command;
@@ -96,7 +97,10 @@ int handle_command(int const argv_index, int const argc, char const *argv[]) {
       exit(EXIT_FAILURE);
     }
     if (access(filePath, R_OK)) {
-      current_command.command = strcat(SOUND_PLAYER, filePath);
+      char cmd[255] = "";
+      strcat(cmd, SOUND_PLAYER);
+      strcat(cmd, filePath);
+      current_command.command = cmd;
     } else {
       printf("\033[31;1mCannot access the file %s. Are you sure this file "
              "exists ?",
