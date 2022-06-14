@@ -19,6 +19,8 @@ These are the functions you may use:
   - `--play` : sets the music to be played by all subsequent alarms. If play is not set, the alarm will only consist of a few pings by your system.
   - `--at` : sets a new alarm to ring at a specific time
   - `--in` : sets a new alarm to ring after a given duration
+  - `--do` : sets a command that will be ran instead of music being played
+  - `--run` : another way to say `--do`
 
 All times use a base of 24h (for our American friends, 14h is 2PM and so on).
 

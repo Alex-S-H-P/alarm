@@ -25,7 +25,7 @@ void handle_unknown_command(const char *cmd) {
 
 void display_help() {
   printf("%s\n%s\n\t%s\n\t\n" HELP_COMMAND_SEQUENCE HELP_COMMAND_SEQUENCE
-             HELP_COMMAND_SEQUENCE HELP_COMMAND_SEQUENCE,
+             HELP_COMMAND_SEQUENCE HELP_COMMAND_SEQUENCE HELP_COMMAND_SEQUENCE,
          C_CORR "Usage" C_CLR " :",
          "alarm [OPTION] [ARGUMENTS] [OPTION2] [ARGUMENTS2] ...",
          C_BOLD "[OPTIONS]" C_CLR, C_GREY "--help :" C_CLR, "Shows this",
@@ -41,8 +41,14 @@ void display_help() {
          C_GREY "--play :" C_CLR,
          "Sets the music file to be played by the following alarms",
          "FILE : the music/sound file's path " C_BOLD "[FILE]" C_CLR
-         " with FILE "
-         "readable");
+         " with FILE readable",
+         C_GREY "--do :" C_CLR,
+         "Instead of playing a music file, will run the command passed in "
+         "argument."
+         "Does so for every alarm set after this argument, until " C_GREY
+         "--play" C_CLR " or " C_GREY "--do" C_HIGHL " is called again",
+         "COMMAND :  what is done at the alarm time." C_BOLD "[COMMAND]" C_CLR
+         "with COMMAND a shell command");
 }
 
 void ring(const char *cmd) {
@@ -97,7 +103,7 @@ int handle_command(int const argv_index, int const argc, char const *argv[]) {
       exit(EXIT_FAILURE);
     }
     if (access(filePath, F_OK) >= 0) {
-      char cmd[255] = "";
+      char cmd[1023] = "";
       strcat(cmd, SOUND_PLAYER);
       strcat(cmd, "\"");
       strcat(cmd, filePath);
@@ -143,6 +149,15 @@ int handle_command(int const argv_index, int const argc, char const *argv[]) {
       exit(EXIT_FAILURE);
     }
     planIn(hour, minute, current_command.command);
+    return 2;
+  } else if (strcmp(cmd, "--do") == 0 || strcmp(cmd, "--run") == 0) {
+    const char *arg = getArg(argv_index + 1, argc, argv);
+    if (arg == NULL) {
+      printf(C_ERR "Cannot find the argument for the command to be ran" C_CLR
+                   "\n");
+      exit(EXIT_FAILURE);
+    }
+    current_command.command = arg;
     return 2;
   } else {
     handle_unknown_command(cmd);
