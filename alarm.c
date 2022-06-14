@@ -1,26 +1,11 @@
+#include "alarm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
 
-#define XSTR(x) STR(x)
-#define STR(x) #x
-
-#define HELP_COMMAND_SEQUENCE "\t%s\n\t\t%s\n\t\t%s\n"
-#define SECONDS_PER_DAY 86400
-
-#ifndef WARN_SOUND_PLAYER
-#define WARN_SOUND_PLAYER "vlc "
-#endif
-
-#pragma message XSTR(WARN_SOUND_PLAYER)
-
 const char *SOUND_PLAYER = WARN_SOUND_PLAYER;
-
-struct alarm_command {
-  const char *command;
-};
 
 const char *getArg(int const idx, int const argc, char const *argv[]) {
   if (idx >= argc) {
@@ -35,32 +20,35 @@ static struct alarm_command current_command = {
     "-en \"\\007 \" && sleep 1 && echo -en \"\\007 \" && sleep 1"};
 
 void handle_unknown_command(const char *cmd) {
-  printf("Unknown command %s\n", cmd);
+  printf(C_ERR "Unknown command" C_HIGHL "%s" C_CLR "\n", cmd);
 }
 
 void display_help() {
   printf("%s\n%s\n\t%s\n\t\n" HELP_COMMAND_SEQUENCE HELP_COMMAND_SEQUENCE
              HELP_COMMAND_SEQUENCE HELP_COMMAND_SEQUENCE,
-         "\033[32;1mUsage\033[0m :",
+         C_CORR "Usage" C_CLR " :",
          "alarm [OPTION] [ARGUMENTS] [OPTION2] [ARGUMENTS2] ...",
-         "\033[1m[OPTIONS]\033[0m", "\033[37;1m--help :\033[0m", "Shows this",
-         "no argument", "\033[37;1m--at :\033[0m",
+         C_BOLD "[OPTIONS]" C_CLR, C_GREY "--help :" C_CLR, "Shows this",
+         "no argument", C_GREY "--at :" C_CLR,
          "Sets a new alarm at specified time",
-         "TIME : when the alarm rings in "
-         "\033[36;1m[HOURS]\033[0mh\033[36;1m[MINUTES]\033[0m with HOURS and "
-         "MINUTES integers",
-         "\033[37;1m--in :\033[0m",
+         "TIME : when the alarm rings in " C_BOLD "[HOURS]" C_CLR "h" C_BOLD
+         "[MINUTES]" C_CLR " with HOURS and MINUTES integers",
+         C_GREY "--in :" C_CLR,
          "Sets a new alarm that will after specified duration",
-         "DURATION : when the alarm rings in "
-         "\033[36;1m[HOURS]\033[0mh\033[36;1m[MINUTES]\033[0m with HOURS and "
+         "DURATION : when the alarm rings in " C_BOLD "[HOURS]" C_CLR "h" C_BOLD
+         "[MINUTES] " C_CLR "with HOURS and "
          "MINUTES integers",
-         "\033[37;1m--play :\033[0m",
+         C_GREY "--play :" C_CLR,
          "Sets the music file to be played by the following alarms",
-         "FILE : the music/sound file's path \033[36;1m[FILE]\033[0m with FILE "
+         "FILE : the music/sound file's path " C_BOLD "[FILE]" C_CLR
+         " with FILE "
          "readable");
 }
 
-void ring(const char *cmd) { system(cmd); }
+void ring(const char *cmd) {
+  printf("ringing \"%s\"\n", cmd);
+  system(cmd);
+}
 
 void planAt(int hour, int minute, const char *cmd) {
   time_t now = time(NULL);
@@ -73,6 +61,7 @@ void planAt(int hour, int minute, const char *cmd) {
   }
   then->tm_hour = hour;
   then->tm_min = minute;
+  then->tm_sec = 0;
   *Uthen = mktime(then);
   time_t diff = *Uthen - now;
   free(Uthen);
@@ -87,6 +76,7 @@ void planAt(int hour, int minute, const char *cmd) {
 
 void planIn(int hour, int minute, const char *cmd) {
   if (fork() == 0) {
+    printf("%ds before ringing \n", hour * 3600 + minute * 60);
     sleep(hour * 3600 + minute * 60);
     ring(cmd);
   } else {
@@ -102,17 +92,20 @@ int handle_command(int const argv_index, int const argc, char const *argv[]) {
   } else if (strcmp(cmd, "--play") == 0) {
     const char *filePath = getArg(argv_index + 1, argc, argv);
     if (filePath == NULL) {
-      printf("\033[31;1mCannot find the argument for the file to be played\n");
+      printf(C_ERR "Cannot find the argument for the file to be played" C_CLR
+                   "\n");
       exit(EXIT_FAILURE);
     }
-    if (access(filePath, R_OK)) {
+    if (access(filePath, F_OK) >= 0) {
       char cmd[255] = "";
       strcat(cmd, SOUND_PLAYER);
+      strcat(cmd, "\"");
       strcat(cmd, filePath);
+      strcat(cmd, "\"");
       current_command.command = cmd;
     } else {
-      printf("\033[31;1mCannot access the file %s. Are you sure this file "
-             "exists ?",
+      printf(C_ERR "Cannot access the file \"%s\". Are you sure this file "
+                   "exists ?" C_CLR "\n",
              filePath);
       exit(EXIT_FAILURE);
     }
@@ -120,32 +113,36 @@ int handle_command(int const argv_index, int const argc, char const *argv[]) {
   } else if (strcmp(cmd, "--at") == 0) {
     const char *ringAt = getArg(argv_index + 1, argc, argv);
     if (ringAt == NULL) {
-      printf("\033[31;1mCannot find the argument for the time to ring at\n");
+      printf(C_ERR "Cannot find the argument for the time to ring at" C_CLR
+                   "\n");
       exit(EXIT_FAILURE);
     }
     int hour;
     int minute;
     if (sscanf(ringAt, "%dh%d", &hour, &minute) != 2) {
-      printf("\033[31;1mCannot find the hour and minute in argument \"%s\"\n",
+      printf(C_ERR "Cannot find the hour and minute in argument \"%s\"" C_CLR
+                   "\n",
              ringAt);
       exit(EXIT_FAILURE);
     }
     planAt(hour, minute, current_command.command);
     return 2;
-  } else if (strcmp(cmd, "--in")) {
+  } else if (strcmp(cmd, "--in") == 0) {
     const char *ringIn = getArg(argv_index + 1, argc, argv);
     if (ringIn == NULL) {
-      printf("\033[31;1mCannot find the argument for the time to ring at\n");
+      printf(C_ERR "Cannot find the argument for the time to ring at" C_CLR
+                   "\n");
       exit(EXIT_FAILURE);
     }
     int hour;
     int minute;
     if (sscanf(ringIn, "%dh%d", &hour, &minute) != 2) {
-      printf("\033[31;1mCannot find the hour and minute in argument \"%s\"\n",
+      printf(C_ERR "Cannot find the hour and minute in argument \"%s\"" C_CLR
+                   "\n",
              ringIn);
       exit(EXIT_FAILURE);
     }
-    planAt(hour, minute, current_command.command);
+    planIn(hour, minute, current_command.command);
     return 2;
   } else {
     handle_unknown_command(cmd);
@@ -156,10 +153,10 @@ int handle_command(int const argv_index, int const argc, char const *argv[]) {
 
 int main(int argc, char const *argv[]) {
   if (argc <= 1) {
-    printf(
-        "\033[31;1mUnexpected usage.\033[0m Not enough arguments\n\t%s\n%s\n",
-        "Example usage : \033[36malarm 9h30\033[0m",
-        "Please consult \033[37;1malarm --help\033[0m for more informations");
+    printf(C_ERR "Unexpected usage." C_CLR " Not enough arguments\n\t%s\n%s\n",
+           "Example usage : " C_HIGHL "alarm 9h30" C_CLR,
+           "Please consult " C_HIGHL "malarm --help" C_CLR
+           " for more informations");
     return EXIT_FAILURE;
   } else {
     int argv_pointer = 1;
