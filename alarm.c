@@ -7,7 +7,11 @@
 #define HELP_COMMAND_SEQUENCE "\t%s\n\t\t%s\n\t\t%s\n"
 #define SECONDS_PER_DAY 86400
 
-const char *SOUND_PLAYER = "vlc ";
+#ifndef WARN_SOUND_PLAYER
+#define WARN_SOUND_PLAYER "vlc "
+#endif
+
+const char *SOUND_PLAYER = WARN_SOUND_PLAYER;
 
 struct alarm_command {
   const char *command;
