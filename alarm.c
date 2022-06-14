@@ -4,12 +4,17 @@
 #include <time.h>
 #include <unistd.h>
 
+#define XSTR(x) STR(x)
+#define STR(x) #x
+
 #define HELP_COMMAND_SEQUENCE "\t%s\n\t\t%s\n\t\t%s\n"
 #define SECONDS_PER_DAY 86400
 
 #ifndef WARN_SOUND_PLAYER
 #define WARN_SOUND_PLAYER "vlc "
 #endif
+
+#pragma message XSTR(WARN_SOUND_PLAYER)
 
 const char *SOUND_PLAYER = WARN_SOUND_PLAYER;
 
